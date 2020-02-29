@@ -12,7 +12,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"regexp"
 	"strings"
 
@@ -92,7 +91,7 @@ func runBuildImpl(cmd *command) (*packages.Package, error) {
 	case 0:
 		buildPath = "."
 	case 1:
-		buildPath = path.Clean(args[0])
+		buildPath = args[0]
 	default:
 		cmd.usage()
 		os.Exit(1)
@@ -118,8 +117,7 @@ func runBuildImpl(cmd *command) (*packages.Package, error) {
 	case "android":
 		if pkg.Name != "main" {
 			for _, arch := range targetArchs {
-				env := androidEnv[arch]
-				if err := goBuild(pkg.PkgPath, env); err != nil {
+				if err := goBuild(pkg.PkgPath, androidEnv[arch]); err != nil {
 					return nil, err
 				}
 			}
@@ -135,8 +133,7 @@ func runBuildImpl(cmd *command) (*packages.Package, error) {
 		}
 		if pkg.Name != "main" {
 			for _, arch := range targetArchs {
-				env := darwinEnv[arch]
-				if err := goBuild(pkg.PkgPath, env); err != nil {
+				if err := goBuild(pkg.PkgPath, darwinEnv[arch]); err != nil {
 					return nil, err
 				}
 			}
@@ -292,10 +289,7 @@ func goCmd(subcmd string, srcs []string, env []string, args ...string) error {
 }
 
 func goCmdAt(at string, subcmd string, srcs []string, env []string, args ...string) error {
-	cmd := exec.Command(
-		goBin(),
-		subcmd,
-	)
+	cmd := exec.Command("go", subcmd)
 	tags := buildTags
 	targetOS, _, err := parseBuildTarget(buildTarget)
 	if err != nil {
@@ -331,8 +325,6 @@ func goCmdAt(at string, subcmd string, srcs []string, env []string, args ...stri
 	cmd.Args = append(cmd.Args, args...)
 	cmd.Args = append(cmd.Args, srcs...)
 	cmd.Env = append([]string{}, env...)
-	// gomobile does not support modules yet.
-	cmd.Env = append(cmd.Env, "GO111MODULE=off")
 	cmd.Dir = at
 	return runCmd(cmd)
 }
